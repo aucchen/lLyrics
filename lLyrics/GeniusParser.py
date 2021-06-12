@@ -22,15 +22,23 @@ from html.parser import HTMLParser
 import Util
 
 
-class Parser(object):
+class Parser(HTMLParser):
     def __init__(self, artist, title):
+        HTMLParser.__init__(self)
         self.artist = artist
         self.title = title
+        self.in_lyrics_container = False
         self.lyrics = ""
 
     def parse(self):
         # remove punctuation from artist/title
         self.artist = self.artist.replace("+", "and")
+        if 'feat.' in self.artist:
+            feat_index = self.artist.find('feat.')
+            self.artist = self.artist[:feat_index].strip()
+        if '[' in self.title:
+            self.title = re.sub("\[.*\]", '', self.title).strip()
+
         clean_artist = Util.remove_punctuation(self.artist)
         clean_title = Util.remove_punctuation(self.title)
 
@@ -50,28 +58,29 @@ class Parser(object):
 
         return self.lyrics
 
+    def handle_starttag(self, tag, attrs):
+        # 1.
+        attrs = {k: v for k, v in attrs}
+        if tag == 'div' and 'class' in attrs:
+            cl = attrs['class']
+            if cl.startswith('Lyrics__Container'):
+                self.in_lyrics_container = True
+                if len(self.lyrics) > 0:
+                    self.lyrics += '\n'
+        if tag == 'br':
+            if self.in_lyrics_container:
+                self.lyrics += '\n'
+
+    def handle_endtag(self, tag):
+        if tag == 'div':
+            if self.in_lyrics_container:
+                self.in_lyrics_container = False
+
+    def handle_data(self, data):
+        if self.in_lyrics_container:
+            data = str(data)
+            self.lyrics += data
+
     def get_lyrics(self, resp):
-        # cut HTML source to relevant part
-        start = resp.find("<lyrics")
-        if start == -1:
-            print("lyrics start not found")
-            return ""
-        resp = resp[start:]
-        end = resp.find("</lyrics>")
-        if end == -1:
-            print("lyrics end not found ")
-            return ""
-        resp = resp[:end]
-
-        # replace unwanted parts
-        resp = re.sub("<lyrics[^>]*>", "", resp)
-        resp = re.sub("<a[^>]*>", "", resp)
-        resp = re.sub("<!--[^>]*>", "", resp)
-        resp = resp.replace("</a>", "")
-        resp = resp.replace("<br>", "")
-        resp = resp.replace("<br />", "")
-        resp = resp.replace("<p>", "")
-        resp = resp.replace("</p>", "")
-        resp = resp.strip()
-
-        return resp
+        self.feed(resp)
+        return self.lyrics

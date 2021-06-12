@@ -89,7 +89,7 @@ context_ui = """
 """
 
 LYRICS_TITLE_STRIP = ["\(live[^\)]*\)", "\(acoustic[^\)]*\)", "\([^\)]*mix\)", "\([^\)]*version\)", "\([^\)]*edit\)",
-                      "\(feat[^\)]*\)", "\([^\)]*bonus[^\)]*track[^\)]*\)"]
+                      "\(feat[^\)]*\)", "\([^\)]*bonus[^\)]*track[^\)]*\)", "\[Explicit\]"]
 LYRICS_TITLE_REPLACE = [("/", "-"), (" & ", " and ")]
 LYRICS_ARTIST_REPLACE = [("/", "-"), (" & ", " and ")]
 
@@ -495,6 +495,7 @@ class lLyrics(GObject.Object, Peas.Activatable):
 
         if self.ignore_brackets:
             LYRICS_TITLE_STRIP.append("\(.*\)")
+            LYRICS_TITLE_STRIP.append("\[.*\]")
 
         # replace ampersands and the like
         for exp in LYRICS_ARTIST_REPLACE:
