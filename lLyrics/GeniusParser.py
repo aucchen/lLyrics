@@ -28,6 +28,7 @@ class Parser(HTMLParser):
         self.artist = artist
         self.title = title
         self.in_lyrics_container = False
+        self.lyrics_divs = 0
         self.lyrics = ""
 
     def parse(self):
@@ -43,7 +44,7 @@ class Parser(HTMLParser):
         clean_title = Util.remove_punctuation(self.title)
 
         # create lyrics Url
-        url = "http://genius.com/" + clean_artist.replace(" ", "-") + "-" + clean_title.replace(" ", "-") + "-lyrics"
+        url = "https://genius.com/" + clean_artist.replace(" ", "-") + "-" + clean_title.replace(" ", "-") + "-lyrics"
         print("rapgenius Url " + url)
         try:
             resp = urllib.request.urlopen(Util.add_request_header(url), None, 3).read()
@@ -61,6 +62,8 @@ class Parser(HTMLParser):
     def handle_starttag(self, tag, attrs):
         # 1.
         attrs = {k: v for k, v in attrs}
+        if tag == 'div' and self.in_lyrics_container:
+            self.lyrics_divs += 1;
         if tag == 'div' and 'class' in attrs:
             cl = attrs['class']
             if cl.startswith('Lyrics__Container'):
@@ -74,7 +77,10 @@ class Parser(HTMLParser):
     def handle_endtag(self, tag):
         if tag == 'div':
             if self.in_lyrics_container:
-                self.in_lyrics_container = False
+                if self.lyrics_divs == 0:
+                    self.in_lyrics_container = False
+                else:
+                    self.lyrics_divs -= 1
 
     def handle_data(self, data):
         if self.in_lyrics_container:
